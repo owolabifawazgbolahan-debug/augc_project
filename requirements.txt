@@ -1,0 +1,10 @@
+mysql-connector-python
+bcrypt
+email-validator
+deep-translator
+argostranslate
+sounddevice
+scipy
+openai-whisper
+edge-tts
+pygame-ce
