@@ -8,8 +8,6 @@ class LMSModels:
     def __init__(self):
         self.database = Database()
 
-    # ==================== COURSES ====================
-
     def create_course(self, title, description, instructor_id):
         if not title.strip():
             return False, "Course title is required."
@@ -88,7 +86,6 @@ class LMSModels:
             (student_id,)
         )
 
-    # ==================== LESSONS ====================
 
     def create_lesson(self, course_id, title, content):
         if not title.strip():
@@ -118,7 +115,6 @@ class LMSModels:
             (course_id,)
         )
 
-    # ==================== ASSIGNMENTS ====================
 
     def create_assignment(self, course_id, title, description):
         if not title.strip():
@@ -148,7 +144,6 @@ class LMSModels:
             (course_id,)
         )
 
-    # ==================== SUBMISSIONS ====================
 
     def submit_assignment(self, assignment_id, student_id, answer):
         if not answer.strip():
@@ -168,7 +163,6 @@ class LMSModels:
 
         return True, "Assignment submitted successfully."
 
-    # ==================== QUIZZES ====================
 
     def create_quiz(self, course_id, title):
         if not title.strip():
@@ -197,8 +191,7 @@ class LMSModels:
             """,
             (course_id,)
         )
-
-    # ==================== QUESTIONS ====================
+ 
 
     def create_question(
         self,
@@ -253,7 +246,6 @@ class LMSModels:
             (quiz_id,)
         )
 
-    # ==================== QUIZ RESULTS ====================
 
     def save_quiz_result(self, quiz_id, student_id, score):
         result = self.database.insert(

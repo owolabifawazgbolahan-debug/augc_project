@@ -8,7 +8,6 @@ scipy
 openai-whisper
 edge-tts
 pygame-ce
-deep-translator
 pyttsx3
 SpeechRecognition
 sounddevice
