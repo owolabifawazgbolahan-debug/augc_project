@@ -3,7 +3,7 @@ from auth import Auth
 
 auth = Auth()
 
-print("========== AUTHENTICATION TEST ==========")
+print("AUTHENTICATION TEST")
 
 print(
     "Valid email:",
@@ -32,4 +32,4 @@ print(
     auth.check_password("Test@1234", hashed)
 )
 
-print("=========================================")
+print(".................")

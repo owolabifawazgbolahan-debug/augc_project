@@ -3,7 +3,7 @@ from database import Database
 
 database = Database()
 
-print("========== DATABASE MODULE TEST ==========")
+print("DATABASE MODULE TEST")
 
 tables = [
     "users",
@@ -23,4 +23,4 @@ for table in tables:
     else:
         print(f"[MISSING] {table}")
 
-print("==========================================")
+print(".......................")

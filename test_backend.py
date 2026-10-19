@@ -3,7 +3,7 @@ from lms_config import lms_config
 
 system = lms_config()
 
-print("\n========== LMS BACKEND TEST ==========")
+print("\nLMS BACKEND TEST")
 
 if system.connect():
     print("MySQL connection: SUCCESS")
