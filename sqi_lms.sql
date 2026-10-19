@@ -1,10 +1,10 @@
 
 
-CREATE DATABASE IF NOT EXISTS sqi_lms
+CREATE DATABASE IF NOT EXISTS augc_project
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
-USE sqi_lms;
+USE augc_project;
 
 CREATE TABLE users (
     id INT NOT NULL AUTO_INCREMENT,
@@ -45,26 +45,33 @@ CREATE TABLE courses (
         REFERENCES users(id)
 );
 
+
+
 CREATE TABLE enrollments (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
     course_id INT NOT NULL,
+
     status ENUM('active', 'completed', 'dropped')
         NOT NULL DEFAULT 'active',
+
     enrolled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
+
     UNIQUE KEY uq_enrollment_user_course (user_id, course_id),
     INDEX idx_enrollments_course (course_id),
 
     CONSTRAINT fk_enrollments_user
         FOREIGN KEY (user_id)
-        REFERENCES users(id)
+        REFERENCES users(id),
 
     CONSTRAINT fk_enrollments_course
         FOREIGN KEY (course_id)
         REFERENCES courses(id)
 );
+
+
 
 CREATE TABLE lessons (
     id INT NOT NULL AUTO_INCREMENT,
@@ -104,6 +111,7 @@ CREATE TABLE assignments (
         REFERENCES courses(id)
 );
 
+
 CREATE TABLE submissions (
     id INT NOT NULL AUTO_INCREMENT,
     assignment_id INT NOT NULL,
@@ -116,40 +124,33 @@ CREATE TABLE submissions (
     graded_at TIMESTAMP NULL DEFAULT NULL,
 
     PRIMARY KEY (id),
-    UNIQUE KEY uq_submission_assignment_user
-        (assignment_id, user_id),
-    INDEX idx_submissions_user (user_id),
 
-    CONSTRAINT chk_submission_score
-        CHECK (score IS NULL OR score >= 0),
+    UNIQUE KEY uq_submission_assignment_user (assignment_id, user_id),
+    INDEX idx_submissions_user (user_id),
 
     CONSTRAINT fk_submissions_assignment
         FOREIGN KEY (assignment_id)
-        REFERENCES assignments(id)
+        REFERENCES assignments(id),
 
     CONSTRAINT fk_submissions_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
 );
 
+
+
 CREATE TABLE quizzes (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    course_id INT UNSIGNED NOT NULL,
+    id INT NOT NULL AUTO_INCREMENT,
+    course_id INT NOT NULL,
     title VARCHAR(150) NOT NULL,
     description TEXT,
     total_marks DECIMAL(7,2) NOT NULL DEFAULT 0.00,
-    duration_minutes INT UNSIGNED NOT NULL DEFAULT 30,
+    duration_minutes INT NOT NULL DEFAULT 30,
     is_published BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     PRIMARY KEY (id),
     INDEX idx_quizzes_course (course_id),
-
-    CONSTRAINT chk_quiz_total_marks
-        CHECK (total_marks >= 0),
-
-    CONSTRAINT chk_quiz_duration
-        CHECK (duration_minutes > 0),
 
     CONSTRAINT fk_quizzes_course
         FOREIGN KEY (course_id)
@@ -157,8 +158,8 @@ CREATE TABLE quizzes (
 );
 
 CREATE TABLE questions (
-    id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    quiz_id INT UNSIGNED NOT NULL,
+    id INT NOT NULL AUTO_INCREMENT,
+    quiz_id INT NOT NULL,
     question_text TEXT NOT NULL,
     option_a VARCHAR(1000) NOT NULL,
     option_b VARCHAR(1000) NOT NULL,
@@ -171,9 +172,6 @@ CREATE TABLE questions (
     PRIMARY KEY (id),
     UNIQUE KEY uq_question_order (quiz_id, question_order),
     INDEX idx_questions_quiz (quiz_id),
-
-    CONSTRAINT chk_question_marks
-        CHECK (marks > 0),
 
     CONSTRAINT fk_questions_quiz
         FOREIGN KEY (quiz_id)
@@ -208,3 +206,26 @@ CREATE TABLE quiz_results (
         FOREIGN KEY (user_id)
         REFERENCES users(id)
 );
+
+
+CREATE TABLE quiz_results (
+    id INT NOT NULL AUTO_INCREMENT,
+    quiz_id INT NOT NULL,
+    user_id INT NOT NULL,
+    score DECIMAL(7,2) NOT NULL DEFAULT 0.00,
+    max_score DECIMAL(7,2) NOT NULL DEFAULT 0.00,
+    answers_count INT UNSIGNED NOT NULL DEFAULT 0,
+    attempted_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY (id),
+    INDEX idx_quiz_results_user (user_id),
+    INDEX idx_quiz_results_quiz (quiz_id),
+
+    CONSTRAINT fk_quiz_results_quiz
+        FOREIGN KEY (quiz_id)
+        REFERENCES quizzes(id),
+
+    CONSTRAINT fk_quiz_results_user
+        FOREIGN KEY (user_id)
+        REFERENCES users(id)
+) ENGINE=InnoDB;
