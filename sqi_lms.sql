@@ -1,9 +1,4 @@
-
-
-CREATE DATABASE IF NOT EXISTS augc_project
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
+CREATE DATABASE augc_project
 USE augc_project;
 
 CREATE TABLE users (
