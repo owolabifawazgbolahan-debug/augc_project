@@ -3,7 +3,7 @@
 
 
 # class TranslationService:
-#     """Translates LMS text, quiz questions, and answer options."""
+
 
 #     SUPPORTED_LANGUAGES = {
 #         "english": "en",
