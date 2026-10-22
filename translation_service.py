@@ -1,105 +1,93 @@
 
-# from deep_translator import GoogleTranslator
+import argostranslate.package
+import argostranslate.translate
 
 
-# class TranslationService:
+class TranslationService:
+    """Translates LMS content into the student's language."""
 
+    SUPPORTED_LANGUAGES = {
+        "english": "en",
+        "yoruba": "yo",
+        "hausa": "ha",
+        "igbo": "ig",
+        "french": "fr",
+        "spanish": "es",
+        "arabic": "ar",
+        "german": "de",
+        "portuguese": "pt",
+        "chinese": "zh",
+        "hindi": "hi"
+    }
 
-#     SUPPORTED_LANGUAGES = {
-#         "english": "en",
-#         "yoruba": "yo",
-#         "hausa": "ha",
-#         "igbo": "ig",
-#         "french": "fr",
-#         "spanish": "es",
-#         "arabic": "ar",
-#         "german": "de",
-#         "portuguese": "pt",
-#         "chinese": "zh-CN",
-#         "hindi": "hi"
-#     }
+    def translate(self, text, target_language):
+        if not text:
+            return text
 
-#     def get_supported_languages(self):
-#         return list(self.SUPPORTED_LANGUAGES.keys())
+        language = target_language.lower().strip()
+        target_code = self.SUPPORTED_LANGUAGES.get(language)
 
-#     def translate_text(self, text, target_language, source_language="english"):
-#         """Translate a single piece of text."""
+        if not target_code:
+            return text
 
-#         if not isinstance(text, str) or not text.strip():
-#             return False, "Text cannot be empty."
+        if target_code == "en":
+            return text
 
-#         if not isinstance(target_language, str):
-#             return False, "Invalid target language."
+        try:
+            installed_languages = (
+                argostranslate.translate.get_installed_languages()
+            )
 
-#         if not isinstance(source_language, str):
-#             return False, "Invalid source language."
+            source = next(
+                (lang for lang in installed_languages
+                 if lang.code == "en"),
+                None
+            )
 
-#         source_language = source_language.strip().lower()
-#         target_language = target_language.strip().lower()
+            target = next(
+                (lang for lang in installed_languages
+                 if lang.code == target_code),
+                None
+            )
 
-#         if source_language not in self.SUPPORTED_LANGUAGES:
-#             return False, "Unsupported source language."
+            if not source or not target:
+                argostranslate.package.update_package_index()
+                packages = argostranslate.package.get_available_packages()
 
-#         if target_language not in self.SUPPORTED_LANGUAGES:
-#             return False, "Unsupported target language."
+                package = next(
+                    (p for p in packages
+                     if p.from_code == "en"
+                     and p.to_code == target_code),
+                    None
+                )
 
-#         if source_language == target_language:
-#             return True, text
+                if not package:
+                    return (
+                        f"[Translation model unavailable for {language}] "
+                        f"{text}"
+                    )
 
-#         try:
-#             translator = GoogleTranslator(
-#                 source=self.SUPPORTED_LANGUAGES[source_language],
-#                 target=self.SUPPORTED_LANGUAGES[target_language]
-#             )
+                argostranslate.package.install_from_path(
+                    package.download()
+                )
 
-#             translated_text = translator.translate(text.strip())
+                installed_languages = (
+                    argostranslate.translate.get_installed_languages()
+                )
 
-#             if not translated_text:
-#                 return False, "Translation returned no result."
+                source = next(
+                    lang for lang in installed_languages
+                    if lang.code == "en"
+                )
 
-#             return True, translated_text
+                target = next(
+                    lang for lang in installed_languages
+                    if lang.code == target_code
+                )
 
-#         except Exception as error:
-#             print("Translation service error:", error)
-#             return False, (
-#                 "Translation is temporarily unavailable. "
-#                 "Check your internet connection and try again."
-#             )
+            translation = source.get_translation(target)
+            return translation.translate(str(text))
 
-#     def translate_quiz_question(
-#         self,
-#         question,
-#         option_a,
-#         option_b,
-#         option_c,
-#         option_d,
-#         target_language,
-#         source_language="english"
-#     ):
-#         """Translate a question and its four answer options."""
-
-#         original_texts = [
-#             question, option_a, option_b, option_c, option_d
-#         ]
-
-#         translated_texts = []
-
-#         for text in original_texts:
-#             success, result = self.translate_text(
-#                 text,
-#                 target_language,
-#                 source_language
-#             )
-
-#             if not success:
-#                 return False, result
-
-#             translated_texts.append(result)
-
-#         return True, {
-#             "question": translated_texts[0],
-#             "option_a": translated_texts[1],
-#             "option_b": translated_texts[2],
-#             "option_c": translated_texts[3],
-#             "option_d": translated_texts[4]
-#         }
+        except Exception as error:
+            print("Translation error:", error)
+            return text

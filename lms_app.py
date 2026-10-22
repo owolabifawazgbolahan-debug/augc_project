@@ -13,7 +13,7 @@ class lmsAPP:
         self.models = LMSModels()
         self.Home()
 
-    # ==================== HOME MENU ====================
+    #  HOME MENU 
 
     def Home(self):
         while True:
@@ -654,19 +654,27 @@ class lmsAPP:
 
     # ==================== CREATE COURSE ====================
 
+    
     def create_course(self, user):
         print("\n========== CREATE COURSE ==========")
 
         title = input("Enter course title: ").strip()
         description = input("Enter course description: ").strip()
 
+        instructor_id = user["id"]
+
         result = self.models.create_course(
             title,
             description,
-            user["id"]
+            instructor_id
         )
 
-        print(result[1])
+        if result:
+            print("Course created successfully!")
+            print(f"Course ID: {result}")
+        else:
+            print("Failed to create course.")
+
 
     # ==================== SELECT INSTRUCTOR COURSE ====================
 
@@ -930,7 +938,7 @@ class lmsAPP:
         else:
             print("Student promoted to instructor successfully.")
 
-    # ==================== ADMIN: SYSTEM REPORTS ====================
+    # ADMIN: SYSTEM REPORTS 
 
     def admin_view_reports(self):
         print("\n========== SYSTEM REPORTS ==========")

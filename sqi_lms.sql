@@ -43,7 +43,7 @@ CREATE TABLE courses (
 
 
 CREATE TABLE enrollments (
-    id INT NOT NULL AUTO_INCREMENT,
+    student_id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
     course_id INT NOT NULL,
 
@@ -223,4 +223,4 @@ CREATE TABLE quiz_results (
     CONSTRAINT fk_quiz_results_user
         FOREIGN KEY (user_id)
         REFERENCES users(id)
-) ENGINE=InnoDB;
+);

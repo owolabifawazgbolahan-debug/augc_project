@@ -4,22 +4,39 @@ import bcrypt
 
 
 class lms_config:
-    """Main backend for the SQI Learning Management System."""
+    """Backend for the SQI Learning Management System."""
 
     APP_NAME = "SQI Learning Management System"
 
+    # Database settings
     HOST = "127.0.0.1"
     PORT = 3306
     USER = "root"
     PASSWORD = ""
     DATABASE = "augc_project"
 
+    # Roles allowed in the LMS
     ALLOWED_ROLES = ("student", "instructor", "admin")
+
+    SUPPORTED_LANGUAGES = {
+        "english": "en",
+        "yoruba": "yo",
+        "hausa": "ha",
+        "igbo": "ig",
+        "french": "fr",
+        "spanish": "es",
+        "arabic": "ar",
+        "german": "de",
+        "portuguese": "pt",
+        "chinese": "zh",
+        "hindi": "hi"
+    }
 
     def __init__(self):
         self.connection = None
         self.cursor = None
 
+    # ---------------- DATABASE ----------------
 
     def connect(self):
         """Connect to the MySQL database."""
@@ -37,22 +54,25 @@ class lms_config:
             return True
 
         except sql.Error as error:
-            print(f"MySQL connection failed: {error}")
+            print(f"Database connection failed: {error}")
             self.connection = None
             self.cursor = None
             return False
 
     def close(self):
-        """Close the cursor and database connection."""
+        """Close the database connection."""
 
         if self.cursor is not None:
             self.cursor.close()
             self.cursor = None
 
-        if self.connection is not None and self.connection.is_connected():
-            self.connection.close()
+        if self.connection is not None:
+            if self.connection.is_connected():
+                self.connection.close()
 
         self.connection = None
+
+    # ---------------- EMAIL VALIDATION ----------------
 
     def validate_email(self, email):
         """Check whether an email address is valid."""
@@ -60,14 +80,19 @@ class lms_config:
         if not isinstance(email, str):
             return False
 
-        pattern = r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+        pattern = (
+            r"^[A-Za-z0-9._%+-]+@"
+            r"[A-Za-z0-9.-]+\.[A-Za-z]{2,}$"
+        )
 
         return re.fullmatch(pattern, email.strip()) is not None
 
+    # ---------------- PASSWORD SECURITY ----------------
+
     def validate_password(self, password):
         """
-        Require at least:
-        - 8 characters
+        A password must contain:
+        - At least 8 characters
         - One uppercase letter
         - One lowercase letter
         - One number
@@ -91,38 +116,47 @@ class lms_config:
 
         return True
 
-
     def hash_password(self, password):
-        """Hash a password using bcrypt."""
+        """Turn a password into a secure hash before saving it."""
 
-        hashed = bcrypt.hashpw(
+        hashed_password = bcrypt.hashpw(
             password.encode("utf-8"),
             bcrypt.gensalt()
         )
 
-        return hashed.decode("utf-8")
+        return hashed_password.decode("utf-8")
 
     def verify_password(self, password, password_hash):
-        """Compare a password against its stored hash."""
+        """Check whether a password matches its saved hash."""
 
         try:
             return bcrypt.checkpw(
                 password.encode("utf-8"),
                 password_hash.encode("utf-8")
             )
+
         except (ValueError, TypeError, AttributeError):
             return False
 
+    # ---------------- CHECK EMAIL ----------------
 
     def email_exists(self, email):
         """Check whether an email is already registered."""
+
+        if not isinstance(email, str):
+            return False
 
         if not self.connect():
             return None
 
         try:
             self.cursor.execute(
-                "SELECT id FROM users WHERE email = %s LIMIT 1",
+                """
+                SELECT id
+                FROM users
+                WHERE email = %s
+                LIMIT 1
+                """,
                 (email.strip().lower(),)
             )
 
@@ -135,8 +169,16 @@ class lms_config:
         finally:
             self.close()
 
+    # ---------------- REGISTER USER ----------------
+
     def register_user(self, first_name, last_name, email, password):
-        """Register a new student account."""
+        """Create a new student account."""
+
+        if not all(
+            isinstance(value, str)
+            for value in (first_name, last_name, email, password)
+        ):
+            return False, "Please enter valid account details."
 
         first_name = first_name.strip()
         last_name = last_name.strip()
@@ -150,7 +192,7 @@ class lms_config:
 
         if not self.validate_password(password):
             return False, (
-                "Password must contain at least 8 characters, "
+                "Your password must contain at least 8 characters, "
                 "an uppercase letter, a lowercase letter, "
                 "a number and a special character."
             )
@@ -160,7 +202,12 @@ class lms_config:
 
         try:
             self.cursor.execute(
-                "SELECT id FROM users WHERE email = %s LIMIT 1",
+                """
+                SELECT id
+                FROM users
+                WHERE email = %s
+                LIMIT 1
+                """,
                 (email,)
             )
 
@@ -171,10 +218,17 @@ class lms_config:
 
             self.cursor.execute(
                 """
-                INSERT INTO users
-                    (first_name, last_name, email, password_hash, role,
-                     email_verified, is_active)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO users (
+                    first_name,
+                    last_name,
+                    email,
+                    password_hash,
+                    role,
+                    email_verified,
+                    is_active,
+                    preferred_language
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """,
                 (
                     first_name,
@@ -183,7 +237,8 @@ class lms_config:
                     password_hash,
                     "student",
                     False,
-                    True
+                    True,
+                    "english"
                 )
             )
 
@@ -191,7 +246,7 @@ class lms_config:
 
             return True, (
                 "Account created successfully. "
-                "Email verification is still required."
+                "Please verify your email before logging in."
             )
 
         except sql.Error as error:
@@ -204,8 +259,13 @@ class lms_config:
         finally:
             self.close()
 
+    # ---------------- LOGIN USER ----------------
+
     def login_user(self, email, password):
-        """Authenticate a user and return their account details."""
+        """Check login details and return the user's information."""
+
+        if not isinstance(email, str) or not isinstance(password, str):
+            return False, "Please enter a valid email and password."
 
         email = email.strip().lower()
 
@@ -218,8 +278,16 @@ class lms_config:
         try:
             self.cursor.execute(
                 """
-                SELECT id, first_name, last_name, email,
-                       password_hash, role, email_verified, is_active
+                SELECT
+                    id,
+                    first_name,
+                    last_name,
+                    email,
+                    password_hash,
+                    role,
+                    email_verified,
+                    is_active,
+                    preferred_language
                 FROM users
                 WHERE email = %s
                 LIMIT 1
@@ -242,8 +310,11 @@ class lms_config:
                 return False, "This account has been deactivated."
 
             if not user["email_verified"]:
-                return False, "Please verify your email before logging in."
+                return False, (
+                    "Please verify your email before logging in."
+                )
 
+            # Never return the password hash to the application.
             user.pop("password_hash", None)
 
             return True, user
@@ -255,9 +326,101 @@ class lms_config:
         finally:
             self.close()
 
+    # ---------------- LANGUAGE SETTINGS ----------------
+
+    def set_preferred_language(self, user_id, language):
+        """Save the language selected by a user."""
+
+        if not isinstance(language, str):
+            return False, "Please select a valid language."
+
+        language = language.strip().lower()
+
+        if language not in self.SUPPORTED_LANGUAGES:
+            return False, "This language is not supported."
+
+        if not self.connect():
+            return False, "Unable to connect to the database."
+
+        try:
+            self.cursor.execute(
+                """
+                UPDATE users
+                SET preferred_language = %s
+                WHERE id = %s
+                """,
+                (language, user_id)
+            )
+
+            # Save the change to the database.
+            self.connection.commit()
+
+            if self.cursor.rowcount == 0:
+                # A zero row count can mean the language was
+                # already selected, so check whether the user exists.
+                self.cursor.execute(
+                    """
+                    SELECT id
+                    FROM users
+                    WHERE id = %s
+                    LIMIT 1
+                    """,
+                    (user_id,)
+                )
+
+                if self.cursor.fetchone() is None:
+                    return False, "User not found."
+
+            return True, "Your language preference has been saved."
+
+        except sql.Error as error:
+            if self.connection and self.connection.is_connected():
+                self.connection.rollback()
+
+            print(f"Language update failed: {error}")
+            return False, "Could not save your language preference."
+
+        finally:
+            self.close()
+
+    def get_preferred_language(self, user_id):
+        """Find the language saved for a particular user."""
+
+        if not self.connect():
+            return "english"
+
+        try:
+            self.cursor.execute(
+                """
+                SELECT preferred_language
+                FROM users
+                WHERE id = %s
+                LIMIT 1
+                """,
+                (user_id,)
+            )
+
+            user = self.cursor.fetchone()
+
+            if user and user.get("preferred_language"):
+                language = user["preferred_language"].lower()
+
+                if language in self.SUPPORTED_LANGUAGES:
+                    return language
+
+            return "english"
+
+        except sql.Error as error:
+            print(f"Language lookup failed: {error}")
+            return "english"
+
+        finally:
+            self.close()
+
+    # ---------------- USER ROLES ----------------
 
     def has_role(self, user, allowed_roles):
-        """Check whether the logged-in user has permission."""
+        """Check whether a user has permission to perform an action."""
 
         if not isinstance(user, dict):
             return False
@@ -268,7 +431,7 @@ class lms_config:
         return user.get("role") in allowed_roles
 
     def require_role(self, user, allowed_roles):
-        """Raise an error when a user lacks permission."""
+        """Stop a user from performing an action without permission."""
 
         if not self.has_role(user, allowed_roles):
             raise PermissionError(
@@ -277,8 +440,10 @@ class lms_config:
 
         return True
 
+    # ---------------- GET USER DETAILS ----------------
+
     def get_user(self, user_id):
-        """Retrieve a user's public account details."""
+        """Get a user's public account information."""
 
         if not self.connect():
             return None
@@ -286,8 +451,15 @@ class lms_config:
         try:
             self.cursor.execute(
                 """
-                SELECT id, first_name, last_name, email,
-                       role, email_verified, is_active
+                SELECT
+                    id,
+                    first_name,
+                    last_name,
+                    email,
+                    role,
+                    email_verified,
+                    is_active,
+                    preferred_language
                 FROM users
                 WHERE id = %s
                 LIMIT 1
