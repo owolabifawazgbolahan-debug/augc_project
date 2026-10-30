@@ -1,8 +1,7 @@
-
 from auth import Auth
 from email_service import EmailService
 from models import LMSModels
-
+from translation_service import TranslationService
 
 class lmsAPP:
     """Console application for the SQI Learning Management System."""
@@ -11,6 +10,7 @@ class lmsAPP:
         self.auth = Auth()
         self.email_service = EmailService()
         self.models = LMSModels()
+        self.translation_service = TranslationService()
         self.Home()
 
     #  HOME MENU 
@@ -25,7 +25,7 @@ class lmsAPP:
 3. Create Initial Admin Account
 4. Exit
 
-====================================================
+
 """)
 
             choice = input("Enter your choice: ").strip()
@@ -42,7 +42,7 @@ class lmsAPP:
             else:
                 print("Invalid choice.")
 
-    # ==================== ADMIN ACCOUNT CREATION ====================
+    # ADMIN ACCOUNT CREATION
 
     def create_admin_account(self):
         print("\n========== CREATE ADMIN ACCOUNT ==========")
@@ -114,8 +114,6 @@ class lmsAPP:
         else:
             print("Administrator account created successfully.")
             print("You can now log in with your admin credentials.")
-
-    # ==================== REGISTRATION ====================
 
     def Register(self):
         print("\n========== REGISTER ==========")
@@ -209,7 +207,6 @@ class lmsAPP:
 
             return
 
-    # ==================== LOGIN ====================
 
     def Login(self):
         print("\n========== LOGIN ==========")
@@ -240,7 +237,6 @@ class lmsAPP:
         else:
             print("Unknown account type.")
 
-    # ==================== STUDENT DASHBOARD ====================
 
     def student_dashboard(self, user):
         while True:
@@ -321,7 +317,6 @@ class lmsAPP:
             else:
                 print("Invalid choice.")
 
-    # ==================== AVAILABLE COURSES ====================
 
     def view_available_courses(self):
         courses = self.models.get_courses()
@@ -337,7 +332,6 @@ class lmsAPP:
             print(f"Title: {course['title']}")
             print(f"Description: {course['description']}")
 
-    # ==================== ENROLLMENT ====================
 
     def enroll_in_course(self, user):
         courses = self.models.get_courses()
@@ -409,7 +403,6 @@ class lmsAPP:
         print("You are not enrolled in that course.")
         return None
 
-    # ==================== SUBMIT ASSIGNMENT ====================
 
     def submit_assignment(self, user):
         course_id = self.select_enrolled_course(user)
@@ -465,7 +458,6 @@ class lmsAPP:
 
         print(result[1])
 
-    # ==================== TAKE QUIZ ====================
 
     def take_quiz(self, user):
         course_id = self.select_enrolled_course(user)
@@ -556,7 +548,6 @@ class lmsAPP:
         print(f"Percentage: {(score / total_questions) * 100:.2f}%")
         print(result[1])
 
-    # ==================== STUDENT RESULTS ====================
 
     def view_my_results(self, user):
         results = self.models.get_student_results(user["id"])
@@ -571,23 +562,23 @@ class lmsAPP:
             print(f"\nQuiz: {result['title']}")
             print(f"Score: {result['score']}")
 
-    # ==================== INSTRUCTOR DASHBOARD ====================
 
+    
     def instructor_dashboard(self, user):
         while True:
             print("""
-========== INSTRUCTOR DASHBOARD ==========
+    ========== INSTRUCTOR DASHBOARD ==========
 
-1. Create Course
-2. View All Courses
-3. Add Lesson
-4. Create Assignment
-5. Create Quiz
-6. Add Quiz Question
-7. Logout
+    1. Create Course
+    2. View All Courses
+    3. Add Lesson
+    4. Create Assignment
+    5. Create Quiz
+    6. Add Quiz Question
+    7. Translate Exam Questions
+    8. Logout
 
-==========================================
-""")
+    """)
 
             choice = input("Enter your choice: ").strip()
 
@@ -605,11 +596,8 @@ class lmsAPP:
                     content = input("Enter lesson content: ").strip()
 
                     result = self.models.create_lesson(
-                        course_id,
-                        title,
-                        content
+                        course_id, title, content
                     )
-
                     print(result[1])
 
             elif choice == "4":
@@ -622,11 +610,8 @@ class lmsAPP:
                     ).strip()
 
                     result = self.models.create_assignment(
-                        course_id,
-                        title,
-                        description
+                        course_id, title, description
                     )
-
                     print(result[1])
 
             elif choice == "5":
@@ -634,26 +619,21 @@ class lmsAPP:
 
                 if course_id is not None:
                     title = input("Enter quiz title: ").strip()
-
-                    result = self.models.create_quiz(
-                        course_id,
-                        title
-                    )
-
+                    result = self.models.create_quiz(course_id, title)
                     print(result[1])
 
             elif choice == "6":
                 self.add_quiz_question(user)
 
             elif choice == "7":
+                self.translate_exam_questions(user)
+
+            elif choice == "8":
                 print("You have logged out.")
                 break
 
             else:
                 print("Invalid choice.")
-
-    # ==================== CREATE COURSE ====================
-
     
     def create_course(self, user):
         print("\n========== CREATE COURSE ==========")
@@ -674,9 +654,6 @@ class lmsAPP:
             print(f"Course ID: {result}")
         else:
             print("Failed to create course.")
-
-
-    # ==================== SELECT INSTRUCTOR COURSE ====================
 
     def select_instructor_course(self, user):
         courses = self.models.get_courses()
@@ -708,7 +685,6 @@ class lmsAPP:
         print("That course does not belong to you.")
         return None
 
-    # ==================== ADD QUIZ QUESTION ====================
 
     def add_quiz_question(self, user):
         course_id = self.select_instructor_course(user)
@@ -764,9 +740,109 @@ class lmsAPP:
             correct_answer
         )
 
-        print(result[1])
+        print(result[1]),
 
-    # ==================== ADMIN DASHBOARD ====================
+    
+    def translate_exam_questions(self, user):
+        """Display quiz questions translated into a chosen language."""
+
+        course_id = self.select_instructor_course(user)
+
+        if course_id is None:
+            return
+
+        quizzes = self.models.get_course_quizzes(course_id)
+
+        if not quizzes:
+            print("There are no quizzes in this course.")
+            return
+
+        print("\n========== SELECT A QUIZ ==========")
+
+        for quiz in quizzes:
+            print(f"{quiz['id']}. {quiz['title']}")
+
+        try:
+            quiz_id = int(input("Enter quiz ID: ").strip())
+        except ValueError:
+            print("Enter a valid quiz ID.")
+            return
+
+        selected_quiz = None
+
+        for quiz in quizzes:
+            if int(quiz["id"]) == quiz_id:
+                selected_quiz = quiz
+                break
+
+        if selected_quiz is None:
+            print("That quiz does not belong to this course.")
+            return
+
+        print("""
+    ========== SELECT LANGUAGE ==========
+
+    1. Yoruba
+    2. Hausa
+    3. Igbo
+    4. French
+    5. Spanish
+    6. Arabic
+    7. German
+    8. Portuguese
+    9. Chinese
+    10. Hindi
+    """)
+
+        languages = {
+            "1": "yoruba",
+            "2": "hausa",
+            "3": "igbo",
+            "4": "french",
+            "5": "spanish",
+            "6": "arabic",
+            "7": "german",
+            "8": "portuguese",
+            "9": "chinese",
+            "10": "hindi"
+        }
+
+        choice = input("Choose a language: ").strip()
+        target_language = languages.get(choice)
+
+        if target_language is None:
+            print("Invalid language choice.")
+            return
+
+        questions = self.models.get_quiz_questions(quiz_id)
+
+        if not questions:
+            print("This quiz has no questions.")
+            return
+
+        print(f"\n========== {target_language.upper()} TRANSLATION ==========")
+        print("Original questions in the database will not be changed.")
+
+        for number, question in enumerate(questions, start=1):
+            print(f"\nQuestion {number}:")
+
+            print(self.translation_service.translate(
+                question["question_text"], target_language
+            ))
+
+            for option in ("a", "b", "c", "d"):
+                option_text = question[f"option_{option}"]
+
+                translated_option = self.translation_service.translate(
+                    option_text, target_language
+                )
+
+                print(f"{option.upper()}. {translated_option}")
+
+        print("\nTranslation display completed.")
+
+
+    #ADMIN DASHBOARD
 
     def admin_dashboard(self, user):
         while True:
@@ -835,7 +911,6 @@ class lmsAPP:
             print(f"Email verified: {user['email_verified']}")
             print(f"Active: {user['is_active']}")
 
-    # ==================== ADMIN: ACTIVATE / DEACTIVATE ====================
 
     def admin_toggle_user(self):
         self.admin_view_users()
@@ -880,7 +955,6 @@ class lmsAPP:
             else:
                 print("User account deactivated.")
 
-    # ==================== ADMIN: PROMOTE STUDENT ====================
 
     def admin_promote_user(self):
         users = self.models.database.fetch_all(
@@ -938,7 +1012,6 @@ class lmsAPP:
         else:
             print("Student promoted to instructor successfully.")
 
-    # ADMIN: SYSTEM REPORTS 
 
     def admin_view_reports(self):
         print("\n========== SYSTEM REPORTS ==========")

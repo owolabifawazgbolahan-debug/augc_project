@@ -8,10 +8,6 @@ class LMSModels:
     def __init__(self):
         self.database = Database()
 
-    # ==========================================
-    # COURSES
-    # ==========================================
-
     def create_course(self, title, description, instructor_id):
         """Create a new course."""
 
@@ -87,11 +83,6 @@ class LMSModels:
             """,
             (course_id,)
         )
-
-    # ==========================================
-    # ENROLLMENTS
-    # ==========================================
-
     
     def enroll_student(self, student_id, course_id):
         """Enroll a student in a course."""
@@ -181,9 +172,6 @@ class LMSModels:
             (course_id,)
         )
 
-    # ==========================================
-    # LESSONS
-    # ==========================================
 
     def create_lesson(
         self,
@@ -278,10 +266,6 @@ class LMSModels:
             (lesson_id,)
         )
 
-    # ==========================================
-    # ASSIGNMENTS
-    # ==========================================
-
     def create_assignment(
         self,
         course_id,
@@ -372,79 +356,41 @@ class LMSModels:
             (assignment_id,)
         )
 
-    # ==========================================
-    # ASSIGNMENT SUBMISSIONS
-    # ==========================================
 
-    def submit_assignment(self, assignment_id, student_id, content):
-        """Save a student's assignment submission."""
+    
+    def submit_assignment(self, assignment_id, student_id, answer):
+        """Submit a student's answer to an assignment."""
 
-        assignment = self.get_assignment(assignment_id)
+        assignment = self.database.fetch_one(
+            """
+            SELECT id
+            FROM assignments
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (assignment_id,)
+        )
 
         if assignment is None:
             return False, "Assignment not found."
 
-        student = self.database.fetch_one(
-            """
-            SELECT id
-            FROM users
-            WHERE id = %s AND role = 'student'
-            LIMIT 1
-            """,
-            (student_id,)
-        )
-
-        if student is None:
-            return False, "Student account not found."
-
-        enrollment = self.database.fetch_one(
-            """
-            SELECT student_id
-            FROM enrollments
-            WHERE student_id = %s
-              AND course_id = %s
-              AND status = 'active'
-            LIMIT 1
-            """,
-            (student_id, assignment["course_id"])
-        )
-
-        if enrollment is None:
-            return False, "You must be enrolled in this course."
-
-        existing = self.database.fetch_one(
-            """
-            SELECT id
-            FROM submissions
-            WHERE assignment_id = %s AND student_id = %s
-            LIMIT 1
-            """,
-            (assignment_id, student_id)
-        )
-
-        if existing is not None:
-            return self.database.execute(
-                """
-                UPDATE submissions
-                SET content = %s
-                WHERE id = %s
-                """,
-                (content, existing["id"])
-            )
-
         result = self.database.insert(
             """
-            INSERT INTO submissions
-                (assignment_id, student_id, content)
+            INSERT INTO submissions (
+                assignment_id,
+                user_id,
+                submission_text
+            )
             VALUES (%s, %s, %s)
             """,
-            (assignment_id, student_id, content)
+            (assignment_id, student_id, answer)
         )
 
         if result is None:
             return False, "Unable to submit assignment."
 
         return True, "Assignment submitted successfully."
+
 
     def get_student_submissions(self, student_id):
         """Get all submissions from a student."""
@@ -479,10 +425,6 @@ class LMSModels:
             """,
             (assignment_id,)
         )
-
-    # ==========================================
-    # QUIZZES
-    # ==========================================
 
     def create_quiz(self, course_id, title, description=None):
         """Create a quiz for a course."""
@@ -567,12 +509,6 @@ class LMSModels:
             """,
             (quiz_id,)
         )
-
-    # ==========================================
-    # QUIZ QUESTIONS
-    # ==========================================
-
-    
 
     def create_question(
         self,
@@ -692,11 +628,6 @@ class LMSModels:
             """,
             (question_id,)
         )
-
-    # ==========================================
-    # QUIZ RESULTS
-    # ==========================================
-
     
     def save_quiz_result(self, quiz_id, student_id, score):
         """Save a student's quiz result."""
@@ -786,7 +717,7 @@ class LMSModels:
                    quizzes.title,
                    quiz_results.score,
                    quiz_results.max_score,
-                   quiz_results.attemted_at
+                   quiz_results.attempted_at
             FROM quiz_results
             INNER JOIN quizzes
                 ON quizzes.id = quiz_results.quiz_id

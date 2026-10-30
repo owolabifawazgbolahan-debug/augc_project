@@ -36,7 +36,6 @@ class lms_config:
         self.connection = None
         self.cursor = None
 
-    # ---------------- DATABASE ----------------
 
     def connect(self):
         """Connect to the MySQL database."""
@@ -72,7 +71,6 @@ class lms_config:
 
         self.connection = None
 
-    # ---------------- EMAIL VALIDATION ----------------
 
     def validate_email(self, email):
         """Check whether an email address is valid."""
@@ -87,7 +85,6 @@ class lms_config:
 
         return re.fullmatch(pattern, email.strip()) is not None
 
-    # ---------------- PASSWORD SECURITY ----------------
 
     def validate_password(self, password):
         """
@@ -169,7 +166,6 @@ class lms_config:
         finally:
             self.close()
 
-    # ---------------- REGISTER USER ----------------
 
     def register_user(self, first_name, last_name, email, password):
         """Create a new student account."""
@@ -259,7 +255,6 @@ class lms_config:
         finally:
             self.close()
 
-    # ---------------- LOGIN USER ----------------
 
     def login_user(self, email, password):
         """Check login details and return the user's information."""
@@ -314,7 +309,6 @@ class lms_config:
                     "Please verify your email before logging in."
                 )
 
-            # Never return the password hash to the application.
             user.pop("password_hash", None)
 
             return True, user
@@ -326,7 +320,6 @@ class lms_config:
         finally:
             self.close()
 
-    # ---------------- LANGUAGE SETTINGS ----------------
 
     def set_preferred_language(self, user_id, language):
         """Save the language selected by a user."""
@@ -352,12 +345,9 @@ class lms_config:
                 (language, user_id)
             )
 
-            # Save the change to the database.
             self.connection.commit()
 
             if self.cursor.rowcount == 0:
-                # A zero row count can mean the language was
-                # already selected, so check whether the user exists.
                 self.cursor.execute(
                     """
                     SELECT id
@@ -417,7 +407,6 @@ class lms_config:
         finally:
             self.close()
 
-    # ---------------- USER ROLES ----------------
 
     def has_role(self, user, allowed_roles):
         """Check whether a user has permission to perform an action."""
@@ -440,7 +429,6 @@ class lms_config:
 
         return True
 
-    # ---------------- GET USER DETAILS ----------------
 
     def get_user(self, user_id):
         """Get a user's public account information."""

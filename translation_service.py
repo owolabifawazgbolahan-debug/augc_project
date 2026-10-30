@@ -4,9 +4,9 @@ import argostranslate.translate
 
 
 class TranslationService:
-    """Translates LMS content into the student's language."""
+    """Translate LMS questions from English."""
 
-    SUPPORTED_LANGUAGES = {
+    LANGUAGES = {
         "english": "en",
         "yoruba": "yo",
         "hausa": "ha",
@@ -24,70 +24,73 @@ class TranslationService:
         if not text:
             return text
 
-        language = target_language.lower().strip()
-        target_code = self.SUPPORTED_LANGUAGES.get(language)
+        language = target_language.strip().lower()
+        target_code = self.LANGUAGES.get(language)
 
-        if not target_code:
-            return text
+        if target_code is None:
+            return f"Unsupported language: {language}"
 
         if target_code == "en":
             return text
 
         try:
-            installed_languages = (
-                argostranslate.translate.get_installed_languages()
-            )
+            installed = argostranslate.translate.get_installed_languages()
 
             source = next(
-                (lang for lang in installed_languages
-                 if lang.code == "en"),
+                (lang for lang in installed if lang.code == "en"),
                 None
             )
 
             target = next(
-                (lang for lang in installed_languages
+                (lang for lang in installed
+                 if lang.code == target_code),
+                None
+            )
+
+            if source and target:
+                translation = source.get_translation(target)
+                return translation.translate(str(text))
+
+            print(f"Looking for an English-to-{language} model...")
+
+            argostranslate.package.update_package_index()
+            packages = argostranslate.package.get_available_packages()
+
+            package = next(
+                (p for p in packages
+                 if p.from_code == "en"
+                 and p.to_code == target_code),
+                None
+            )
+
+            if package is None:
+                return (
+                    f"Translation model unavailable for {language}. "
+                    "Please choose another language."
+                )
+
+            downloaded = package.download()
+            argostranslate.package.install_from_path(downloaded)
+
+            installed = argostranslate.translate.get_installed_languages()
+
+            source = next(
+                (lang for lang in installed if lang.code == "en"),
+                None
+            )
+
+            target = next(
+                (lang for lang in installed
                  if lang.code == target_code),
                 None
             )
 
             if not source or not target:
-                argostranslate.package.update_package_index()
-                packages = argostranslate.package.get_available_packages()
-
-                package = next(
-                    (p for p in packages
-                     if p.from_code == "en"
-                     and p.to_code == target_code),
-                    None
-                )
-
-                if not package:
-                    return (
-                        f"[Translation model unavailable for {language}] "
-                        f"{text}"
-                    )
-
-                argostranslate.package.install_from_path(
-                    package.download()
-                )
-
-                installed_languages = (
-                    argostranslate.translate.get_installed_languages()
-                )
-
-                source = next(
-                    lang for lang in installed_languages
-                    if lang.code == "en"
-                )
-
-                target = next(
-                    lang for lang in installed_languages
-                    if lang.code == target_code
-                )
+                return "The translation model could not be loaded."
 
             translation = source.get_translation(target)
             return translation.translate(str(text))
 
         except Exception as error:
             print("Translation error:", error)
-            return text
+            return "Translation failed. Check your internet connection and try again."
