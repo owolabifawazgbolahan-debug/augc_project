@@ -1,20 +1,20 @@
 
-# import pyttsx3
+import pyttsx3
 
 
-# class VoiceAssistant:
-#     def __init__(self):
-#         self.engine = pyttsx3.init()
+class VoiceAssistant:
+    def __init__(self):
+        self.engine = pyttsx3.init()
 
-#     def speak(self, message):
-#         print("Assistant:", message)
-#         self.engine.say(message)
-#         self.engine.runAndWait()
+    def speak(self, message):
+        print("Assistant:", message)
+        self.engine.say(message)
+        self.engine.runAndWait()
 
-#     def start(self):
-#         self.speak("Welcome to the Learning Management System.")
+    def start(self):
+        self.speak("Welcome to the Learning Management System.")
 
-#         while True:
+        # while True:
 #             print("\n1. Ask a question")
 #             print("2. Exit")
 

@@ -2,7 +2,7 @@ from auth import Auth
 from email_service import EmailService
 from models import LMSModels
 from translation_service import TranslationService
-
+import pyttsx3
 class lmsAPP:
     """Console application for the SQI Learning Management System."""
 
@@ -11,19 +11,25 @@ class lmsAPP:
         self.email_service = EmailService()
         self.models = LMSModels()
         self.translation_service = TranslationService()
+        self.engine = pyttsx3.init()
         self.Home()
+        self.speak
 
-    #  HOME MENU 
+    def speak(self, message):
+        print(message)
+        self.engine.say(message)
+        self.engine.runAndWait()
 
     def Home(self):
+        self.speak("Welcome To The SQI Learning Management System. ")
+    
         while True:
             print("""
 ========== SQI LEARNING MANAGEMENT SYSTEM ==========
 
 1. Register
 2. Login
-3. Create Initial Admin Account
-4. Exit
+3. Exit
 
 
 """)
@@ -252,6 +258,7 @@ class lmsAPP:
 7. Take Quiz
 8. View My Quiz Results
 9. Logout
+0. Translate Exam Questions
 
 =======================================
 """)
@@ -312,6 +319,9 @@ class lmsAPP:
 
             elif choice == "9":
                 print("You have logged out.")
+
+            elif choice == "0":
+                self.translate_exam_questions(user)
                 break
 
             else:
