@@ -40,9 +40,9 @@ class lmsAPP:
                 self.Register()
             elif choice == "2":
                 self.Login()
+            # elif choice == "3":
+                # self.create_admin_account()
             elif choice == "3":
-                self.create_admin_account()
-            elif choice == "4":
                 print("Thank you for using SQI LMS.")
                 break
             else:
@@ -753,103 +753,148 @@ class lmsAPP:
         print(result[1]),
 
     
-    def translate_exam_questions(self, user):
-        """Display quiz questions translated into a chosen language."""
+    
+def translate_exam_questions(self, user):
+    """Translate authorised quiz questions; students may answer afterward."""
+    is_student = user["role"] == "student"
 
+    if is_student:
+        course_id = self.select_enrolled_course(user)
+    elif user["role"] == "instructor":
         course_id = self.select_instructor_course(user)
+    else:
+        print("Only students and instructors can translate exam questions.")
+        return
 
-        if course_id is None:
-            return
+    if course_id is None:
+        return
 
-        quizzes = self.models.get_course_quizzes(course_id)
+    quizzes = self.models.get_course_quizzes(course_id)
 
-        if not quizzes:
-            print("There are no quizzes in this course.")
-            return
+    if not quizzes:
+        print("There are no quizzes in this course.")
+        return
 
-        print("\n========== SELECT A QUIZ ==========")
+    print("\n========== SELECT A QUIZ ==========")
+    for quiz in quizzes:
+        print(f"{quiz['id']}. {quiz['title']}")
 
-        for quiz in quizzes:
-            print(f"{quiz['id']}. {quiz['title']}")
+    try:
+        quiz_id = int(input("Enter quiz ID: ").strip())
+    except ValueError:
+        print("Enter a valid quiz ID.")
+        return
 
-        try:
-            quiz_id = int(input("Enter quiz ID: ").strip())
-        except ValueError:
-            print("Enter a valid quiz ID.")
-            return
+    selected_quiz = next(
+        (quiz for quiz in quizzes if int(quiz["id"]) == quiz_id),
+        None,
+    )
 
-        selected_quiz = None
+    if selected_quiz is None:
+        print("That quiz does not belong to this course.")
+        return
 
-        for quiz in quizzes:
-            if int(quiz["id"]) == quiz_id:
-                selected_quiz = quiz
-                break
+    print("""
+========== SELECT LANGUAGE ==========
 
-        if selected_quiz is None:
-            print("That quiz does not belong to this course.")
-            return
+1. Yoruba
+2. Hausa
+3. Igbo
+4. French
+5. Spanish
+6. Arabic
+7. German
+8. Portuguese
+9. Chinese
+10. Hindi
+""")
 
-        print("""
-    ========== SELECT LANGUAGE ==========
+    languages = {
+        "1": "yoruba", "2": "hausa", "3": "igbo", "4": "french",
+        "5": "spanish", "6": "arabic", "7": "german",
+        "8": "portuguese", "9": "chinese", "10": "hindi",
+    }
+    target_language = languages.get(input("Choose a language: ").strip())
 
-    1. Yoruba
-    2. Hausa
-    3. Igbo
-    4. French
-    5. Spanish
-    6. Arabic
-    7. German
-    8. Portuguese
-    9. Chinese
-    10. Hindi
-    """)
+    if target_language is None:
+        print("Invalid language choice.")
+        return
 
-        languages = {
-            "1": "yoruba",
-            "2": "hausa",
-            "3": "igbo",
-            "4": "french",
-            "5": "spanish",
-            "6": "arabic",
-            "7": "german",
-            "8": "portuguese",
-            "9": "chinese",
-            "10": "hindi"
+    questions = self.models.get_quiz_questions(quiz_id)
+
+    if not questions:
+        print("This quiz has no questions.")
+        return
+
+    translated_questions = []
+    print(f"\n========== {target_language.upper()} TRANSLATION ==========")
+
+    for number, question in enumerate(questions, start=1):
+        translated_text = self.translation_service.translate(
+            question["question_text"], target_language
+        )
+        translated_options = {
+            option: self.translation_service.translate(
+                question[f"option_{option}"], target_language
+            )
+            for option in ("a", "b", "c", "d")
         }
+        translated_questions.append(
+            (question, translated_text, translated_options)
+        )
 
-        choice = input("Choose a language: ").strip()
-        target_language = languages.get(choice)
+        print(f"\nQuestion {number}: {translated_text}")
+        for option in ("a", "b", "c", "d"):
+            print(f"{option.upper()}. {translated_options[option]}")
 
-        if target_language is None:
-            print("Invalid language choice.")
-            return
+    print("\nTranslation display completed.")
 
-        questions = self.models.get_quiz_questions(quiz_id)
+    # Instructors can view translations but cannot take the quiz here.
+    if not is_student:
+        return
 
-        if not questions:
-            print("This quiz has no questions.")
-            return
+    print("\n========== ANSWER THE TRANSLATED QUIZ ==========")
+    score = 0
 
-        print(f"\n========== {target_language.upper()} TRANSLATION ==========")
-        print("Original questions in the database will not be changed.")
+    for number, (question, translated_text, translated_options) in enumerate(
+        translated_questions, start=1
+    ):
+        print(f"\nQuestion {number}: {translated_text}")
+        for option in ("a", "b", "c", "d"):
+            print(f"{option.upper()}. {translated_options[option]}")
 
-        for number, question in enumerate(questions, start=1):
-            print(f"\nQuestion {number}:")
+        while True:
+            answer = input("Your answer (A/B/C/D): ").strip().upper()
+            if answer in ("A", "B", "C", "D"):
+                break
+            print("Please enter A, B, C, or D.")
 
-            print(self.translation_service.translate(
-                question["question_text"], target_language
-            ))
+        correct_question = self.models.database.fetch_one(
+            """
+            SELECT correct_answer
+            FROM questions
+            WHERE id = %s AND quiz_id = %s
+            """,
+            (question["id"], quiz_id),
+        )
 
-            for option in ("a", "b", "c", "d"):
-                option_text = question[f"option_{option}"]
+        if (
+            correct_question
+            and answer == correct_question["correct_answer"].upper()
+        ):
+            print("Correct!")
+            score += 1
+        else:
+            print("Incorrect.")
 
-                translated_option = self.translation_service.translate(
-                    option_text, target_language
-                )
+    result = self.models.save_quiz_result(quiz_id, user["id"], score)
+    total_questions = len(translated_questions)
 
-                print(f"{option.upper()}. {translated_option}")
+    print("\n========== QUIZ COMPLETED ==========")
+    print(f"Correct answers: {score}/{total_questions}")
+    print(f"Percentage: {(score / total_questions) * 100:.2f}%")
+    print(result[1])
 
-        print("\nTranslation display completed.")
 
 
     #ADMIN DASHBOARD
