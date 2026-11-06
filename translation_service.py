@@ -37,7 +37,7 @@ class TranslationService:
             installed = argostranslate.translate.get_installed_languages()
 
             source = next(
-                (lang for lang in installed if lang.code == "en")
+                (lang for lang in installed if lang.code == "en"),
                 None
             )
 
